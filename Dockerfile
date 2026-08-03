@@ -436,11 +436,13 @@ RUN set -eux; \
         arm64) hm_arch=aarch64 ;; \
         *) echo "unsupported arch for himalaya" >&2; exit 1 ;; \
     esac; \
-    # Pinned to 1.2.0 deliberately: the bundled email/himalaya skill documents
-    # v1 syntax (`folder list`, `backend.type`, `folder.aliases`). himalaya 2.x
-    # renamed those to `mailbox`/a new schema, so `latest` would leave the agent
-    # issuing commands its own skill taught it that the binary no longer has.
-    hm_ver="1.2.0"; \
+    # Pinned to 2.0.0. 1.2.0 matched the bundled skill's documented syntax, but
+    # its prebuilt binary ships WITHOUT the oauth2 cargo feature ("missing
+    # `oauth2` cargo feature" at config parse), and Microsoft has disabled basic
+    # auth on this mailbox — so v1 cannot authenticate at all. 2.x carries SASL
+    # XOAUTH2, which works. The skill's v1 command names are corrected in
+    # SOUL.md instead.
+    hm_ver="2.0.0"; \
     curl -fsSL --retry 3 -o /tmp/himalaya.tgz \
         "https://github.com/pimalaya/himalaya/releases/download/v${hm_ver}/himalaya.${hm_arch}-linux.tgz"; \
     mkdir -p /tmp/hm; \
