@@ -426,6 +426,27 @@ RUN set -eux; \
     npm cache clean --force; \
     claude --version
 
+# himalaya CLI — backs the bundled email/himalaya skill, which is how the agent
+# composes and saves DRAFTS. Deliberately separate from the email *gateway*
+# adapter (EMAIL_ADDRESS/EMAIL_PASSWORD), which is an inbound channel and marks
+# the whole inbox as seen on startup — not wanted here.
+RUN set -eux; \
+    case "$(dpkg --print-architecture)" in \
+        amd64) hm_arch=x86_64 ;; \
+        arm64) hm_arch=aarch64 ;; \
+        *) echo "unsupported arch for himalaya" >&2; exit 1 ;; \
+    esac; \
+    hm_ver="$(curl -fsSL https://api.github.com/repos/pimalaya/himalaya/releases/latest \
+        | sed -nE 's/.*"tag_name": *"v?([^"]+)".*/\1/p' | head -1)"; \
+    test -n "$hm_ver"; \
+    curl -fsSL --retry 3 -o /tmp/himalaya.tgz \
+        "https://github.com/pimalaya/himalaya/releases/download/v${hm_ver}/himalaya.${hm_arch}-linux.tgz"; \
+    mkdir -p /tmp/hm; \
+    tar -xzf /tmp/himalaya.tgz -C /tmp/hm; \
+    install -m 0755 "$(find /tmp/hm -type f -name himalaya | head -1)" /usr/local/bin/himalaya; \
+    rm -rf /tmp/himalaya.tgz /tmp/hm; \
+    himalaya --version
+
 # Pre-s6 entrypoint.sh did `source .venv/bin/activate` which exported
 # the venv bin onto PATH; Architecture B's main-wrapper.sh does the
 # same for the container's main process, but `docker exec` and our
