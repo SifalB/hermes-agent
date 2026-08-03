@@ -406,6 +406,26 @@ ENV HERMES_LAZY_INSTALL_TARGET=/opt/data/lazy-packages
 COPY --chmod=0755 docker/hermes-exec-shim.sh /opt/hermes/bin/hermes
 COPY --chmod=0755 docker/entrypoint-dispatch.sh /opt/hermes/docker/entrypoint-dispatch.sh
 
+# --- Railway deploy extras: CLIs the bundled skills shell out to ---
+# The github/* skills drive `gh`, and autonomous-ai-agents/claude-code drives
+# `claude`. Neither ships in the upstream image, so those skills are inert
+# without them. Installed into the image (not $HERMES_HOME) because the
+# Railway volume at /data is not on PATH and would be lost on recreate.
+RUN set -eux; \
+    arch="$(dpkg --print-architecture)"; \
+    gh_ver="$(curl -fsSL https://api.github.com/repos/cli/cli/releases/latest \
+        | sed -nE 's/.*"tag_name": *"v?([^"]+)".*/\1/p' | head -1)"; \
+    test -n "$gh_ver"; \
+    curl -fsSL --retry 3 -o /tmp/gh.tar.gz \
+        "https://github.com/cli/cli/releases/download/v${gh_ver}/gh_${gh_ver}_linux_${arch}.tar.gz"; \
+    tar -xzf /tmp/gh.tar.gz -C /tmp; \
+    install -m 0755 "/tmp/gh_${gh_ver}_linux_${arch}/bin/gh" /usr/local/bin/gh; \
+    rm -rf /tmp/gh.tar.gz "/tmp/gh_${gh_ver}_linux_${arch}"; \
+    gh --version; \
+    npm install -g @anthropic-ai/claude-code; \
+    npm cache clean --force; \
+    claude --version
+
 # Pre-s6 entrypoint.sh did `source .venv/bin/activate` which exported
 # the venv bin onto PATH; Architecture B's main-wrapper.sh does the
 # same for the container's main process, but `docker exec` and our
