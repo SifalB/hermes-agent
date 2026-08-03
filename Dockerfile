@@ -436,9 +436,11 @@ RUN set -eux; \
         arm64) hm_arch=aarch64 ;; \
         *) echo "unsupported arch for himalaya" >&2; exit 1 ;; \
     esac; \
-    hm_ver="$(curl -fsSL https://api.github.com/repos/pimalaya/himalaya/releases/latest \
-        | sed -nE 's/.*"tag_name": *"v?([^"]+)".*/\1/p' | head -1)"; \
-    test -n "$hm_ver"; \
+    # Pinned to 1.2.0 deliberately: the bundled email/himalaya skill documents
+    # v1 syntax (`folder list`, `backend.type`, `folder.aliases`). himalaya 2.x
+    # renamed those to `mailbox`/a new schema, so `latest` would leave the agent
+    # issuing commands its own skill taught it that the binary no longer has.
+    hm_ver="1.2.0"; \
     curl -fsSL --retry 3 -o /tmp/himalaya.tgz \
         "https://github.com/pimalaya/himalaya/releases/download/v${hm_ver}/himalaya.${hm_arch}-linux.tgz"; \
     mkdir -p /tmp/hm; \
